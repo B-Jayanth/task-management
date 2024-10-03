@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Management System</title>
+    <style>
+      /* Basic Reset */
+      /* Basic Reset */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      /* Body Styles */
+      body {
+        font-family: Arial, sans-serif;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      body.light-mode {
+        background-color: #f0f0f0;
+        color: #333;
+      }
+
+      body.dark-mode {
+        background-color: #333;
+        color: #fff;
+      }
+
+      /* Header Styles */
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        text-align: center;
+      }
+
+      /* Button Styles */
+      button {
+        background-color: #4caf50;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: background-color 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #45a049;
+      }
+
+      /* Form Styles */
+      #taskForm,
+      #usernameForm {
+        margin: 20px 0;
+        display: flex;
+        justify-content: center;
+      }
+
+      #taskForm input,
+      #usernameForm input {
+        width: 40%;
+        padding: 10px;
+        margin-right: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+
+      /* Task List Styles */
+      #taskList {
+        margin: 20px 0;
+      }
+
+      h2 {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+
+      /* Task List Styles */
+      #taskList ul {
+        list-style-type: none;
+        padding: 0;
+      }
+
+      .task-item,
+      .completed-task {
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 50%; /* Added width for completed tasks */
+      }
+
+      .task-item {
+        background-color: #f1f1f1;
+      }
+
+      .task-item:hover {
+        background-color: #e0e0e0;
+      }
+
+      .completed-task {
+        background-color: #e6ffe6;
+        text-decoration: line-through;
+      }
+
+      /* Progress Section Styles */
+      #progressSection {
+        background-color: #f0f0f0;
+        padding: 20px;
+        border-radius: 5px;
+        margin-top: 20px;
+        width: 50%;
+        text-align: center;
+      }
+
+      #progressBar {
+        width: 100%;
+        height: 20px;
+        background-color: #ddd;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+
+      .progress-filled {
+        height: 100%;
+        background-color: #4caf50;
+        transition: width 0.5s ease-in-out;
+      }
+
+      /* Edit/Delete Button Styles */
+      .edit-btn,
+      .delete-btn {
+        margin-left: 10px;
+        background-color: #2196f3; /* changed to a more visible color */
+        border: none;
+        padding: 5px 10px;
+        font-size: 14px;
+        cursor: pointer;
+        border-radius: 5px;
+      }
+
+      .edit-btn:hover,
+      .delete-btn:hover {
+        background-color: #1976d2; /* changed to a more visible color */
+      }
+
+      /* Complete Button Styles */
+      .complete-btn {
+        background-color: #1976d2;
+        border: none;
+        padding: 5px 10px;
+        font-size: 14px;
+
+        border-radius: 5px;
+      }
+
+      .complete-btn:hover {
+        background-color: #1976d2;
+      }
+    </style>
+  </head>
+  <body>
+    <br /><br />
+    <button id="darkModeToggle">Toggle Mode</button>
+    <h1>Welcome, <span id="userName"></span></h1>
+    <main>
+      <section id="usernameForm">
+        <input
+          type="text"
+          id="usernameInput"
+          placeholder="Enter your username"
+        />
+        <button id="setUsername">Set Username</button>
+      </section>
+
+      <section id="taskForm" style="display: none">
+        <input type="text" id="taskInput" placeholder="Enter task name" />
+        <button id="addTask">Add Task</button>
+      </section>
+
+      <section id="taskList" style="display: none">
+        <h2>Pending Tasks</h2>
+        <ul id="pendingTasks"></ul>
+        <h2>Completed Tasks</h2>
+        <ul id="completedTasks"></ul>
+      </section>
+
+      <section id="progressSection" style="display: none">
+        <h2>Progress: <span id="progressPercentage">0%</span></h2>
+        <div id="progressBar">
+          <div class="progress-filled" style="width: 0%"></div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      // Get elements
+      const usernameInput = document.getElementById("usernameInput");
+      const setUsernameBtn = document.getElementById("setUsername");
+      const taskInput = document.getElementById("taskInput");
+      const addTaskBtn = document.getElementById("addTask");
+      const pendingTasksList = document.getElementById("pendingTasks");
+      const completedTasksList = document.getElementById("completedTasks");
+      const progressBar = document.getElementById("progressBar");
+      const progressPercentage = document.getElementById("progressPercentage");
+      const taskForm = document.getElementById("taskForm");
+      const taskList = document.getElementById("taskList");
+      const progressSection = document.getElementById("progressSection");
+
+      // Initialize variables
+      let username = "";
+      let tasks = [];
+      let completedTasks = [];
+
+      // Function to set username
+      function setUsername() {
+        username = usernameInput.value.trim();
+        if (username) {
+          loadTasks();
+          updateUI();
+        }
+      }
+
+      // Function to load tasks from local storage
+      function loadTasks() {
+        const storedTasks = JSON.parse(localStorage.getItem(username)) || {
+          tasks: [],
+          completedTasks: [],
+        };
+        tasks = storedTasks.tasks;
+        completedTasks = storedTasks.completedTasks;
+        renderTasks();
+        updateProgress();
+      }
+
+      // Function to add task
+      function addTask() {
+        const taskName = taskInput.value.trim();
+        if (taskName !== "") {
+          const newTask = {
+            id: Date.now(),
+            name: taskName,
+            completed: false,
+          };
+          tasks.push(newTask);
+          saveTasks();
+          renderTasks();
+          updateProgress();
+          clearInput();
+        }
+      }
+
+      // Function to render tasks
+      function renderTasks() {
+        pendingTasksList.innerHTML = "";
+        completedTasksList.innerHTML = "";
+
+        tasks.forEach((task) => {
+          const li = document.createElement("li");
+          li.className = "task-item";
+          li.innerHTML = `
+                    <span>${task.name}</span>
+                    <div>
+                        <button class="complete-btn" onclick="markComplete(${task.id})">Complete</button>
+                        <button class="edit-btn" onclick="editTask(${task.id})">Edit</button>
+                        <button class="delete-btn" onclick="deleteTask(${task.id})">Delete</button>
+                    </div>
+                `;
+          pendingTasksList.appendChild(li);
+        });
+
+        completedTasks.forEach((task) => {
+          const li = document.createElement("li");
+          li.className = "completed-task";
+          li.innerHTML = `
+                    <span>${task.name}</span>
+                    <div>
+                        <button class="edit-btn" onclick="editTask(${task.id})">Edit</button>
+                        <button class="delete-btn" onclick="deleteTask(${task.id})">Delete</button>
+                    </div>
+                `;
+          completedTasksList.appendChild(li);
+        });
+      }
+
+      // Function to mark task as complete
+      function markComplete(taskId) {
+        const taskIndex = tasks.findIndex((t) => t.id === taskId);
+        if (taskIndex !== -1) {
+          tasks[taskIndex].completed = true;
+          completedTasks.push(tasks[taskIndex]);
+          tasks.splice(taskIndex, 1);
+          saveTasks();
+          renderTasks();
+          updateProgress();
+        }
+      }
+
+      // Function to edit task
+      function editTask(taskId) {
+        const taskIndex = tasks.findIndex((t) => t.id === taskId);
+        if (taskIndex !== -1) {
+          const newTaskName = prompt("Edit Task Name:", tasks[taskIndex].name);
+          if (newTaskName) {
+            tasks[taskIndex].name = newTaskName;
+            saveTasks();
+            renderTasks();
+            updateProgress();
+          }
+        } else {
+          const completedTaskIndex = completedTasks.findIndex(
+            (t) => t.id === taskId
+          );
+          if (completedTaskIndex !== -1) {
+            const newTaskName = prompt(
+              "Edit Task Name:",
+              completedTasks[completedTaskIndex].name
+            );
+            if (newTaskName) {
+              completedTasks[completedTaskIndex].name = newTaskName;
+              saveTasks();
+              renderTasks();
+              updateProgress();
+            }
+          }
+        }
+      }
+
+      // Function to delete task
+      function deleteTask(taskId) {
+        tasks = tasks.filter((t) => t.id !== taskId);
+        completedTasks = completedTasks.filter((t) => t.id !== taskId);
+        saveTasks();
+        renderTasks();
+        updateProgress();
+      }
+
+      // Function to save tasks to local storage
+      function saveTasks() {
+        localStorage.setItem(
+          username,
+          JSON.stringify({ tasks, completedTasks })
+        );
+      }
+
+      // Function to update progress bar
+      function updateProgress() {
+        const totalTasks = tasks.length + completedTasks.length;
+        const percentage =
+          totalTasks === 0
+            ? 0
+            : Math.round((completedTasks.length / totalTasks) * 100);
+        progressPercentage.textContent = `${percentage}%`;
+        progressBar.querySelector(
+          ".progress-filled"
+        ).style.width = `${percentage}%`;
+      }
+
+      // Function to clear input field
+      function clearInput() {
+        taskInput.value = "";
+      }
+
+      // Function to update UI
+      function updateUI() {
+        document.getElementById("userName").textContent = username;
+        usernameInput.value = "";
+        taskForm.style.display = "flex";
+        taskList.style.display = "block";
+        progressSection.style.display = "block";
+      }
+
+      // Event listeners
+      setUsernameBtn.addEventListener("click", setUsername);
+      addTaskBtn.addEventListener("click", addTask);
+
+      // Dark mode toggle
+      document
+        .getElementById("darkModeToggle")
+        .addEventListener("click", function () {
+          document.body.classList.toggle("light-mode");
+          document.body.classList.toggle("dark-mode");
+        });
+    </script>
+  </body>
+</html>
